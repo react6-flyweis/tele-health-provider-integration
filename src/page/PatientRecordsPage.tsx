@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,9 +9,28 @@ import {
 } from "@/components/ui/input-group";
 import { usePageTitle } from "@/store/pageTitleStore";
 import { Pencil, Search } from "lucide-react";
+import EditPatientDialog, {
+  type Patient,
+} from "@/components/patients/EditPatientDialog";
 
-const PATIENTS = [
-  { id: "#PT000001", name: "John Doe", initials: "J", age: 32, sessions: 6 },
+// sample patient data with extra fields for editing
+const INITIAL_PATIENTS: Patient[] = [
+  {
+    id: "#PT000001",
+    name: "John Doe",
+    initials: "J",
+    age: 32,
+    sessions: 6,
+    gender: "Male",
+    phone: "(555) 123-4567",
+    email: "john.doe@email.com",
+    medicalHistory:
+      "History of anxiety and mild depression. No chronic physical conditions.",
+    currentDiagnosis: "Generalized Anxiety Disorder (GAD)",
+    treatmentPlan:
+      "Cognitive Behavioral Therapy (CBT), weekly sessions, medication if needed",
+    currentMedications: "Sertraline 50mg daily",
+  },
   {
     id: "#PT000002",
     name: "Emily Smith",
@@ -48,7 +68,11 @@ const CONSULTATION_NOTES = [
 export default function PatientRecordsPage() {
   usePageTitle("Patient Records");
 
-  const selectedPatient = PATIENTS[0];
+  const [patients, setPatients] = React.useState<Patient[]>(INITIAL_PATIENTS);
+  const [selectedIndex, setSelectedIndex] = React.useState(0);
+  const [editOpen, setEditOpen] = React.useState(false);
+
+  const selectedPatient = patients[selectedIndex];
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[300px_1fr]">
@@ -66,12 +90,13 @@ export default function PatientRecordsPage() {
           </InputGroup>
 
           <div className="space-y-1">
-            {PATIENTS.map((patient, index) => (
+            {patients.map((patient, index) => (
               <button
                 key={patient.id}
                 type="button"
+                onClick={() => setSelectedIndex(index)}
                 className={`w-full rounded-lg px-3 py-2 text-left ${
-                  index === 0 ? "bg-slate-100" : "hover:bg-muted/50"
+                  index === selectedIndex ? "bg-slate-100" : "hover:bg-muted/50"
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -106,7 +131,10 @@ export default function PatientRecordsPage() {
               </p>
             </div>
 
-            <Button className="bg-gradient-dash text-white hover:opacity-95">
+            <Button
+              className="bg-gradient-dash text-white hover:opacity-95"
+              onClick={() => setEditOpen(true)}
+            >
               <Pencil className="size-4" />
               Edit Record
             </Button>
@@ -115,19 +143,27 @@ export default function PatientRecordsPage() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="rounded-md bg-muted/50 px-4 py-3">
               <p className="text-xs text-muted-foreground">Age</p>
-              <p className="mt-1 text-sm text-slate-800">32 years</p>
+              <p className="mt-1 text-sm text-slate-800">
+                {selectedPatient.age} years
+              </p>
             </div>
             <div className="rounded-md bg-muted/50 px-4 py-3">
               <p className="text-xs text-muted-foreground">Gender</p>
-              <p className="mt-1 text-sm text-slate-800">Male</p>
+              <p className="mt-1 text-sm text-slate-800">
+                {selectedPatient.gender || "-"}
+              </p>
             </div>
             <div className="rounded-md bg-muted/50 px-4 py-3">
               <p className="text-xs text-muted-foreground">Phone</p>
-              <p className="mt-1 text-sm text-slate-800">(555) 123-4567</p>
+              <p className="mt-1 text-sm text-slate-800">
+                {selectedPatient.phone || "-"}
+              </p>
             </div>
             <div className="rounded-md bg-muted/50 px-4 py-3">
               <p className="text-xs text-muted-foreground">Email</p>
-              <p className="mt-1 text-sm text-slate-800">john.doe@email.com</p>
+              <p className="mt-1 text-sm text-slate-800">
+                {selectedPatient.email || "-"}
+              </p>
             </div>
           </div>
 
@@ -136,8 +172,7 @@ export default function PatientRecordsPage() {
               Medical History
             </h3>
             <div className="rounded-md bg-muted/50 px-4 py-3 text-sm text-slate-700">
-              History of anxiety and mild depression. No chronic physical
-              conditions.
+              {selectedPatient.medicalHistory || "-"}
             </div>
           </section>
 
@@ -146,7 +181,7 @@ export default function PatientRecordsPage() {
               Current Diagnosis
             </h3>
             <div className="rounded-md border-l-4 border-teal-500 bg-slate-100 px-4 py-3 text-sm text-slate-800">
-              Generalized Anxiety Disorder (GAD)
+              {selectedPatient.currentDiagnosis || "-"}
             </div>
           </section>
 
@@ -155,8 +190,7 @@ export default function PatientRecordsPage() {
               Treatment Plan
             </h3>
             <div className="rounded-md bg-muted/50 px-4 py-3 text-sm text-slate-700">
-              Cognitive Behavioral Therapy (CBT), weekly sessions, medication if
-              needed
+              {selectedPatient.treatmentPlan || "-"}
             </div>
           </section>
 
@@ -165,7 +199,7 @@ export default function PatientRecordsPage() {
               Current Medications
             </h3>
             <div className="rounded-md bg-amber-50 px-4 py-3 text-sm text-slate-800">
-              Sertraline 50mg daily
+              {selectedPatient.currentMedications || "-"}
             </div>
           </section>
 
@@ -185,6 +219,18 @@ export default function PatientRecordsPage() {
           </section>
         </CardContent>
       </Card>
+
+      {/* edit dialog instance */}
+      <EditPatientDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        patient={selectedPatient}
+        onSave={(updated) => {
+          setPatients((prev) =>
+            prev.map((p, i) => (i === selectedIndex ? updated : p)),
+          );
+        }}
+      />
     </div>
   );
 }
