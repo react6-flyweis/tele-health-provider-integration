@@ -18,6 +18,7 @@ const SingleVideoSessionPage = lazy(
 const PatientRecordsPage = lazy(() => import("@/page/PatientRecordsPage"));
 const PrescriptionsPage = lazy(() => import("@/page/PrescriptionsPage"));
 const EarningsPage = lazy(() => import("@/page/EarningsPage"));
+const AvailabilityPage = lazy(() => import("@/page/AvailabilityPage"));
 const MessagesPage = lazy(() => import("@/page/MessagesPage"));
 
 export const Routes: RouteObject[] = [
@@ -40,6 +41,7 @@ export const Routes: RouteObject[] = [
       { path: "patient-records", element: <PatientRecordsPage /> },
       { path: "prescriptions", element: <PrescriptionsPage /> },
       { path: "earnings", element: <EarningsPage /> },
+      { path: "availability", element: <AvailabilityPage /> },
       { path: "messages", element: <MessagesPage /> },
       // catch-all within dashboard
       { path: "*", element: <NotFound /> },
