@@ -8,21 +8,20 @@ import { Bell, Search } from "lucide-react";
 
 // store for managing the header title
 import { usePageTitleStore } from "@/store/pageTitleStore";
+import { SidebarTrigger } from "../ui/sidebar";
 
 export default function DashHeader() {
   const title = usePageTitleStore((s) => s.title);
   return (
     <header className="w-full">
       <div className="container mx-auto flex items-center justify-between gap-6 px-4 py-4">
-        {
-          // page title if available, otherwise none
-        }
         <div className="flex flex-1 items-center justify-between gap-6">
+          <SidebarTrigger className="md:hidden" />
           {/* optionally show a page title from the store */}
           {title && <h1 className="text-xl font-semibold">{title}</h1>}
 
           {/* Search */}
-          <div className="flex-1 max-w-sm">
+          <div className="flex-1 max-w-sm hidden sm:block">
             <InputGroup className="h-10 border bg-muted/70 shadow-none">
               <InputGroupAddon className="pl-4">
                 <Search className="size-4 text-muted-foreground" />
