@@ -15,7 +15,7 @@ export function ChatWindow({
 }: ChatWindowProps) {
   if (!activeConversation) {
     return (
-      <section className="flex h-full min-h-155 items-center justify-center rounded-r-lg border bg-card p-6">
+      <section className="flex h-full min-h-[400px] items-center justify-center rounded-r-lg border bg-card p-6">
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <MessageSquare className="text-muted-foreground size-14" />
@@ -30,7 +30,7 @@ export function ChatWindow({
   }
 
   return (
-    <section className="flex h-full min-h-[620px] flex-col rounded-r-lg border bg-card">
+    <section className="flex h-full min-h-[400px] md:min-h-[620px] flex-col rounded-r-lg border bg-card">
       <ChatHeader
         conversation={activeConversation}
         onClose={onCloseConversation}
