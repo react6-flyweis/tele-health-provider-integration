@@ -3,6 +3,7 @@ import type { RouteObject } from "react-router";
 
 import AuthLayout from "@/components/layout/AuthLayout";
 import DashLayout from "@/components/layout/DashLayout";
+import NavigateToMain from "@/components/NavigateToMain";
 import { NotFound } from "@/page/NotFound";
 
 // lazily load page components
@@ -25,9 +26,13 @@ const SettingsPage = lazy(() => import("@/page/SettingsPage"));
 
 export const Routes: RouteObject[] = [
   {
+    path: "/",
+    element: <NavigateToMain />,
+  },
+  {
     element: <AuthLayout />, // default path is "/"
     children: [
-      { path: "/", element: <SignupRolePage /> },
+      { path: "/signin", element: <SignupRolePage /> },
       { path: "patient-login", element: <PatientLoginPage /> },
       { path: "provider-login", element: <ProviderLoginPage /> },
     ],
