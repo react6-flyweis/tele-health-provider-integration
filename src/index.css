@@ -8,6 +8,8 @@
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
+  /* fallback for browsers (Safari) that don't yet support oklch() */
+  --card: #ffffff;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -134,13 +136,32 @@
 }
 
 @layer utilities {
+  /* Safari on macOS sometimes ignores the Tailwind-generated gradients; provide explicit
+     fallbacks and vendor-prefixed versions so the transition is always visible. */
   .bg-gradient-primary {
-    @apply bg-gradient-to-r from-[#346079] to-[#219580];
+    /* keep the original Tailwind utilities for other browsers */
+    /* add a via-stop so there's more separation between the two ends */
+    @apply bg-gradient-to-r from-[#346079] via-[#2b7974] to-[#219580];
+
+    /* solid fallback color in case the gradient fails */
+    background-color: #346079;
+    /* webkit prefixed gradient for older Safari versions */
+    background-image: -webkit-linear-gradient(left, #346079, #2b7974, #219580);
+    /* standard gradient for everything else */
+    background-image: linear-gradient(to right, #346079, #2b7974, #219580);
   }
+
   .bg-gradient-dash {
-    @apply bg-gradient-to-t from-[#346079] to-[#219580];
+    @apply bg-gradient-to-t from-[#346079] via-[#2b7974] to-[#219580];
+    background-color: #346079;
+    background-image: -webkit-linear-gradient(top, #346079, #2b7974, #219580);
+    background-image: linear-gradient(to top, #346079, #2b7974, #219580);
   }
+
   .bg-sidebar-accent {
-    @apply bg-gradient-to-t from-[#346079] to-[#219580];
+    @apply bg-gradient-to-t from-[#346079] via-[#2b7974] to-[#219580];
+    background-color: #346079;
+    background-image: -webkit-linear-gradient(top, #346079, #2b7974, #219580);
+    background-image: linear-gradient(to top, #346079, #2b7974, #219580);
   }
 }
