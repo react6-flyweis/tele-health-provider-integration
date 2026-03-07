@@ -71,6 +71,10 @@ export default function PatientRecordsPage() {
   const [patients, setPatients] = React.useState<Patient[]>(INITIAL_PATIENTS);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [editOpen, setEditOpen] = React.useState(false);
+  // keep track of a prescription text for each consultation note (keyed by date)
+  const [notePrescriptions, setNotePrescriptions] = React.useState<
+    Record<string, string>
+  >({});
 
   const selectedPatient = patients[selectedIndex];
 
@@ -213,6 +217,34 @@ export default function PatientRecordsPage() {
                 <div key={entry.date} className="rounded-md border px-4 py-3">
                   <p className="text-xs text-muted-foreground">{entry.date}</p>
                   <p className="mt-2 text-sm text-slate-700">{entry.note}</p>
+
+                  {/* per-note prescription area */}
+                  <textarea
+                    className="w-full rounded-md border px-3 py-2 text-sm mt-2"
+                    placeholder="Write prescription here..."
+                    value={notePrescriptions[entry.date] || ""}
+                    onChange={(e) =>
+                      setNotePrescriptions((prev) => ({
+                        ...prev,
+                        [entry.date]: e.target.value,
+                      }))
+                    }
+                  />
+                  <Button
+                    className="bg-gradient-dash text-white hover:opacity-95 mt-2"
+                    onClick={() => {
+                      const pres = notePrescriptions[entry.date]?.trim();
+                      if (pres) {
+                        console.log("Prescription for", entry.date, ":", pres);
+                        setNotePrescriptions((prev) => ({
+                          ...prev,
+                          [entry.date]: "",
+                        }));
+                      }
+                    }}
+                  >
+                    Send
+                  </Button>
                 </div>
               ))}
             </div>
