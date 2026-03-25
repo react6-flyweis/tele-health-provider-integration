@@ -1,24 +1,63 @@
-import { useState } from "react"
-import { Eye, EyeOff, ArrowLeft } from "lucide-react"
-import { useNavigate } from "react-router"
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { useLocation, useNavigate } from "react-router";
+
+import { loginProvider } from "@/api/auth";
+import { getApiErrorMessage } from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
 
 type Props = {
-  role: "Patient" | "Provider"
-  onSubmitPath?: string
-}
+  role: "Patient" | "Provider";
+  onSubmitPath?: string;
+  useApi?: boolean;
+};
 
 export default function LoginCard({
   role,
   onSubmitPath = "/dashboard",
+  useApi = false,
 }: Props) {
-  const navigate = useNavigate()
-  const [showPassword, setShowPassword] = useState(false)
-  const [remember, setRemember] = useState(false)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const setAuth = useAuthStore((state) => state.setAuth);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState("");
+
+  const loginMutation = useMutation({
+    mutationFn: loginProvider,
+    onSuccess: (data) => {
+      const { token, ...provider } = data;
+      setAuth({ token, provider });
+
+      const redirectPath =
+        (location.state as { from?: string } | null)?.from || onSubmitPath;
+
+      navigate(redirectPath, { replace: true });
+    },
+    onError: (error) => {
+      setFormError(getApiErrorMessage(error));
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    navigate(onSubmitPath)
-  }
+    e.preventDefault();
+    setFormError("");
+
+    if (!useApi) {
+      navigate(onSubmitPath);
+      return;
+    }
+
+    loginMutation.mutate({
+      email,
+      password,
+    });
+  };
 
   return (
     <div className="w-full max-w-[448px] mx-auto">
@@ -47,19 +86,21 @@ export default function LoginCard({
             <input
               type="email"
               placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full h-12 px-4 rounded-[14px] placeholder:text-[#0A0A0A80] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
               required
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-medium">
-              Password
-            </label>
+            <label className="block mb-2 text-sm font-medium">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full h-12 px-4 pr-12 rounded-[14px] placeholder:text-[#0A0A0A80] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
                 required
               />
@@ -80,16 +121,21 @@ export default function LoginCard({
               onChange={() => setRemember(!remember)}
               className="w-4 h-4 accent-teal-600"
             />
-            <span className="text-sm text-gray-600">
-              Remember me
-            </span>
+            <span className="text-sm text-gray-600">Remember me</span>
           </div>
+
+          {formError ? (
+            <p className="text-sm text-red-600" role="alert">
+              {formError}
+            </p>
+          ) : null}
 
           <button
             type="submit"
+            disabled={loginMutation.isPending}
             className="w-full h-[48px] rounded-[14px] text-white font-semibold text-lg bg-[linear-gradient(256.76deg,#219580_18.35%,#346079_55.12%)] shadow-lg"
           >
-            Login
+            {loginMutation.isPending ? "Logging in..." : "Login"}
           </button>
         </form>
 
@@ -105,5 +151,5 @@ export default function LoginCard({
         🔒 Your information is secure and encrypted
       </p>
     </div>
-  )
+  );
 }
