@@ -1,148 +1,179 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { usePageTitle } from "@/store/pageTitleStore";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// extracted components
 import AppointmentTable from "@/components/appointments/AppointmentTable";
-import type { Appointment } from "@/components/appointments/AppointmentTable";
+import type { Appointment as TableAppointment } from "@/components/appointments/AppointmentTable";
 import AppointmentDialog from "@/components/appointments/AppointmentDialog";
+import {
+  getProviderAppointments,
+  type ProviderAppointment,
+  type ProviderAppointmentStatus,
+} from "@/api/appointments";
+import {
+  useCompleteAppointmentMutation,
+  useConfirmAppointmentMutation,
+  useRejectAppointmentMutation,
+} from "@/hooks/useAppointmentMutations";
 
-const SAMPLE_APPOINTMENTS: Appointment[] = [
-  {
-    id: 1,
-    patientId: "#PT000001",
-    name: "John Doe",
-    initials: "J",
-    date: "Feb 2, 2026",
-    time: "10:00 AM",
-    type: "Initial Consultation",
-    status: "confirmed",
-    reason:
-      "Routine mental health check-up and discussion of recent anxiety symptoms.",
-    notes: "",
-  },
-  {
-    id: 2,
-    name: "Emily Smith",
-    initials: "E",
-    date: "Feb 2, 2026",
-    time: "11:30 AM",
-    type: "Follow-up",
-    status: "confirmed",
-  },
-  {
-    id: 3,
-    name: "Michael Brown",
-    initials: "M",
-    date: "Feb 3, 2026",
-    time: "2:00 PM",
-    type: "Therapy Session",
-    status: "pending",
-  },
-  {
-    id: 4,
-    name: "Sarah Johnson",
-    initials: "S",
-    date: "Feb 4, 2026",
-    time: "4:00 PM",
-    type: "Medication Review",
-    status: "confirmed",
-  },
-  {
-    id: 5,
-    name: "Alex Turner",
-    initials: "A",
-    date: "Feb 1, 2026",
-    time: "9:00 AM",
-    type: "Follow-up",
-    status: "completed",
-  },
-  {
-    id: 6,
-    name: "Lisa Anderson",
-    initials: "L",
-    date: "Jan 31, 2026",
-    time: "10:30 AM",
-    type: "Initial Consultation",
-    status: "completed",
-  },
-  {
-    id: 7,
-    name: "David Lee",
-    initials: "D",
-    date: "Jan 30, 2026",
-    time: "3:00 PM",
-    type: "Therapy Session",
-    status: "completed",
-  },
-  {
-    id: 8,
-    name: "Robert Wilson",
-    initials: "R",
-    date: "Jan 29, 2026",
-    time: "11:00 AM",
-    type: "Follow-up",
-    status: "cancelled",
-  },
-  {
-    id: 9,
-    name: "Maria Garcia",
-    initials: "M",
-    date: "Jan 28, 2026",
-    time: "2:30 PM",
-    type: "Therapy Session",
-    status: "cancelled",
-  },
-];
+type AppointmentTab = "pending" | "confirmed" | "completed" | "cancelled";
+
+function formatDate(isoDate: string) {
+  const date = new Date(isoDate);
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function mapAppointmentFromApi(
+  appointment: ProviderAppointment,
+): TableAppointment {
+  const initials = `${appointment.patientId.firstName?.[0] ?? ""}${
+    appointment.patientId.lastName?.[0] ?? ""
+  }`;
+
+  return {
+    id: appointment._id,
+    patientId: appointment.patientId.patientCode
+      ? `#${appointment.patientId.patientCode.replace(/^#/, "")}`
+      : appointment.patientId._id,
+    name: `${appointment.patientId.firstName} ${appointment.patientId.lastName}`,
+    initials,
+    date: formatDate(appointment.date),
+    time: appointment.time,
+    type: appointment.appointmentType || appointment.type || "Unknown",
+    status: appointment.status,
+    reason: appointment.reasonForVisit,
+    notes: appointment.notes ?? "",
+  };
+}
 
 export default function AppointmentsPage() {
   usePageTitle("Appointments");
-  const [currentTab, setCurrentTab] = useState("upcoming");
-  const [selected, setSelected] = useState<Appointment | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const filtered = SAMPLE_APPOINTMENTS.filter((a) => {
-    switch (currentTab) {
-      case "upcoming":
-        return a.status === "confirmed" || a.status === "pending";
-      case "completed":
-        return a.status === "completed";
-      case "cancelled":
-        return a.status === "cancelled";
-      default:
-        return true;
-    }
+  const [currentTab, setCurrentTab] = useState<AppointmentTab>("pending");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<TableAppointment | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [processingAppointmentId, setProcessingAppointmentId] = useState<
+    string | null
+  >(null);
+
+  const statusParam: ProviderAppointmentStatus = currentTab;
+
+  const confirmMutation = useConfirmAppointmentMutation();
+  const rejectMutation = useRejectAppointmentMutation();
+  const completeMutation = useCompleteAppointmentMutation();
+
+  const handleMutation = (mutation: any, appointmentId: string) => {
+    setProcessingAppointmentId(appointmentId);
+
+    mutation.mutate(appointmentId, {
+      onSettled: () => setProcessingAppointmentId(null),
+    });
+  };
+
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ["appointments", statusParam, page],
+    queryFn: () =>
+      getProviderAppointments({
+        status: statusParam,
+        page,
+        limit: 10,
+      }),
+    // keepPreviousData: true,
+    staleTime: 1000 * 60 * 2,
+    retry: 1,
   });
 
-  function handleDetails(appt: Appointment) {
+  const appointments: TableAppointment[] =
+    data?.appointments?.map(mapAppointmentFromApi) ?? [];
+
+  const errorMessage = isError
+    ? error instanceof Error
+      ? error.message
+      : "Unable to load appointments."
+    : null;
+
+  function handleDetails(appt: TableAppointment) {
     setSelected(appt);
     setDialogOpen(true);
   }
 
+  const renderContent = () => {
+    if (isLoading || isFetching) {
+      return (
+        <div className="space-y-3 p-4">
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <Skeleton key={`appt-skel-${idx}`} className="h-14 w-full" />
+          ))}
+        </div>
+      );
+    }
+
+    if (errorMessage) {
+      return (
+        <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
+          {errorMessage}
+        </div>
+      );
+    }
+
+    if (appointments.length === 0) {
+      return (
+        <div className="p-4 text-sm text-muted-foreground">
+          No appointments found for {currentTab}.
+        </div>
+      );
+    }
+
+    return (
+      <AppointmentTable
+        data={appointments}
+        onDetails={handleDetails}
+        onConfirm={(id) => handleMutation(confirmMutation, id)}
+        onReject={(id) => handleMutation(rejectMutation, id)}
+        onComplete={(id) => handleMutation(completeMutation, id)}
+        processingAppointmentId={processingAppointmentId}
+      />
+    );
+  };
+
   return (
     <>
-      <Card>
+      <Card className="p-0">
         <Tabs
-          defaultValue="upcoming"
+          defaultValue="pending"
           value={currentTab}
-          onValueChange={(v) => setCurrentTab(v)}
+          onValueChange={(value) => {
+            setCurrentTab(value as AppointmentTab);
+            setPage(1);
+          }}
           className="h-auto!"
         >
-          <TabsList variant="line" className="">
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+          <TabsList variant="line" className="pt-2">
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
             <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="upcoming" className="p-0">
-            <AppointmentTable data={filtered} onDetails={handleDetails} />
+          <TabsContent value="pending" className="p-0">
+            {renderContent()}
+          </TabsContent>
+          <TabsContent value="confirmed" className="p-0">
+            {renderContent()}
           </TabsContent>
           <TabsContent value="completed" className="p-0">
-            <AppointmentTable data={filtered} onDetails={handleDetails} />
+            {renderContent()}
           </TabsContent>
           <TabsContent value="cancelled" className="p-0">
-            <AppointmentTable data={filtered} onDetails={handleDetails} />
+            {renderContent()}
           </TabsContent>
         </Tabs>
       </Card>
