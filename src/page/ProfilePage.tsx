@@ -1,8 +1,9 @@
-import { type ChangeEvent, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,12 +22,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { usePageTitle } from "@/store/pageTitleStore";
 import { Save, Upload } from "lucide-react";
+import { getProviderProfile, updateProviderProfile } from "@/api/profile";
 
 const profileSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
   lastName: z.string().trim().min(1, "Last name is required"),
   email: z.string().trim().email("Please enter a valid email address"),
-  phone: z.string().trim().min(1, "Phone is required"),
+  phone: z.string().trim(),
   specialty: z.string().trim().min(1, "Specialty is required"),
   licenseNumber: z.string().trim().min(1, "License number is required"),
   yearsOfExperience: z
@@ -40,41 +42,133 @@ const profileSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 
 const INITIAL_FORM: ProfileForm = {
-  firstName: "Sarah",
-  lastName: "Mitchell",
-  email: "sarah.mitchell@mindhealth.com",
-  phone: "(555) 987-6543",
-  specialty: "Clinical Psychology",
-  licenseNumber: "PSY-12345-CA",
-  yearsOfExperience: "12",
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  specialty: "",
+  licenseNumber: "",
+  yearsOfExperience: "",
   professionalBio: "",
 };
 
 export default function ProfilePage() {
   usePageTitle("Profile");
+  const queryClient = useQueryClient();
 
-  const [licenseFiles, setLicenseFiles] = useState<string[]>([]);
+  const [uploadedLicenseFiles, setUploadedLicenseFiles] = useState<
+    string[] | null
+  >(null);
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(
+    null,
+  );
+  const query = useQuery({
+    queryKey: ["providerProfile"],
+    queryFn: getProviderProfile,
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
+  });
+
+  const profileData = query.data;
+
+  const updateProfileMutation = useMutation({
+    mutationFn: updateProviderProfile,
+    onSuccess: async (response) => {
+      setSaveSuccessMessage(response.message);
+      await queryClient.invalidateQueries({ queryKey: ["providerProfile"] });
+    },
+  });
+
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: INITIAL_FORM,
   });
 
+  useEffect(() => {
+    if (!profileData) {
+      return;
+    }
+
+    reset({
+      firstName: profileData.firstName ?? "",
+      lastName: profileData.lastName ?? "",
+      email: profileData.email ?? "",
+      phone: profileData.phone ?? "",
+      specialty: profileData.specialty ?? "",
+      licenseNumber: profileData.licenseNumber ?? "",
+      yearsOfExperience: String(profileData.experience ?? ""),
+      professionalBio: profileData.bio ?? "",
+    });
+  }, [profileData, reset]);
+
+  const apiLicenseFiles = useMemo(
+    () =>
+      profileData?.licenseDocuments?.map((documentUrl) => {
+        const urlSegment = documentUrl.split("/").pop() || documentUrl;
+        return decodeURIComponent(urlSegment);
+      }) ?? [],
+    [profileData?.licenseDocuments],
+  );
+
+  const licenseFiles = uploadedLicenseFiles ?? apiLicenseFiles;
+
+  const providerInitials = useMemo(() => {
+    const firstInitial = profileData?.firstName?.trim().charAt(0) ?? "";
+    const lastInitial = profileData?.lastName?.trim().charAt(0) ?? "";
+    const initials = `${firstInitial}${lastInitial}`.toUpperCase();
+    return initials || "--";
+  }, [profileData?.firstName, profileData?.lastName]);
+
+  const errorMessage = query.isError
+    ? query.error instanceof Error
+      ? query.error.message
+      : "Unable to load profile data."
+    : null;
+
   function onSubmit(data: ProfileForm) {
-    void data;
-    // Submit integration can be added once backend endpoint is available.
+    setSaveSuccessMessage(null);
+
+    updateProfileMutation.mutate({
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      bio: data.professionalBio.trim(),
+      specialty: data.specialty.trim(),
+      experience: Number(data.yearsOfExperience),
+    });
   }
 
   function handleLicenseUpload(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-    setLicenseFiles(files.map((file) => file.name));
+    setUploadedLicenseFiles(files.map((file) => file.name));
   }
 
   return (
     <div className="mx-auto max-w-4xl">
+      {errorMessage && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+          {errorMessage}
+        </div>
+      )}
+
+      {updateProfileMutation.isError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+          {updateProfileMutation.error instanceof Error
+            ? updateProfileMutation.error.message
+            : "Unable to update profile data."}
+        </div>
+      )}
+
+      {saveSuccessMessage && (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">
+          {saveSuccessMessage}
+        </div>
+      )}
+
       <Card className="py-0">
         <CardHeader className="border-b py-5">
           <CardTitle className="text-base font-semibold text-slate-800">
@@ -94,8 +188,15 @@ export default function ProfilePage() {
 
               <div className="flex flex-wrap items-center gap-4">
                 <Avatar className="size-14 border border-slate-200 bg-slate-100">
+                  <AvatarImage
+                    src={profileData?.profileImageUrl}
+                    alt={
+                      `${profileData?.firstName ?? ""} ${profileData?.lastName ?? ""}`.trim() ||
+                      "Profile image"
+                    }
+                  />
                   <AvatarFallback className="font-medium text-slate-600">
-                    SM
+                    {providerInitials}
                   </AvatarFallback>
                 </Avatar>
 
@@ -119,6 +220,9 @@ export default function ProfilePage() {
                   <Input
                     className="h-10"
                     aria-invalid={!!errors.firstName}
+                    disabled={
+                      query.isLoading || updateProfileMutation.isPending
+                    }
                     {...register("firstName")}
                   />
                 </FieldContent>
@@ -135,6 +239,9 @@ export default function ProfilePage() {
                   <Input
                     className="h-10"
                     aria-invalid={!!errors.lastName}
+                    disabled={
+                      query.isLoading || updateProfileMutation.isPending
+                    }
                     {...register("lastName")}
                   />
                 </FieldContent>
@@ -150,6 +257,9 @@ export default function ProfilePage() {
                     type="email"
                     className="h-10"
                     aria-invalid={!!errors.email}
+                    disabled={
+                      query.isLoading || updateProfileMutation.isPending
+                    }
                     {...register("email")}
                   />
                 </FieldContent>
@@ -164,6 +274,9 @@ export default function ProfilePage() {
                   <Input
                     className="h-10"
                     aria-invalid={!!errors.phone}
+                    disabled={
+                      query.isLoading || updateProfileMutation.isPending
+                    }
                     {...register("phone")}
                   />
                 </FieldContent>
@@ -178,6 +291,9 @@ export default function ProfilePage() {
                   <Input
                     className="h-10"
                     aria-invalid={!!errors.specialty}
+                    disabled={
+                      query.isLoading || updateProfileMutation.isPending
+                    }
                     {...register("specialty")}
                   />
                 </FieldContent>
@@ -194,6 +310,9 @@ export default function ProfilePage() {
                   <Input
                     className="h-10"
                     aria-invalid={!!errors.licenseNumber}
+                    disabled={
+                      query.isLoading || updateProfileMutation.isPending
+                    }
                     {...register("licenseNumber")}
                   />
                 </FieldContent>
@@ -211,6 +330,7 @@ export default function ProfilePage() {
                 <Input
                   className="h-10"
                   aria-invalid={!!errors.yearsOfExperience}
+                  disabled={query.isLoading || updateProfileMutation.isPending}
                   {...register("yearsOfExperience")}
                 />
               </FieldContent>
@@ -229,6 +349,7 @@ export default function ProfilePage() {
                 <Textarea
                   className="min-h-28 resize-none"
                   aria-invalid={!!errors.professionalBio}
+                  disabled={query.isLoading || updateProfileMutation.isPending}
                   {...register("professionalBio")}
                 />
               </FieldContent>
@@ -263,6 +384,7 @@ export default function ProfilePage() {
                 accept=".pdf,.png,.jpg,.jpeg"
                 multiple
                 className="sr-only"
+                disabled={query.isLoading || updateProfileMutation.isPending}
                 onChange={handleLicenseUpload}
               />
 
@@ -274,9 +396,13 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex justify-end pt-1">
-              <Button type="submit" className="h-9 gap-2 bg-gradient-dash px-4">
+              <Button
+                type="submit"
+                disabled={query.isLoading || updateProfileMutation.isPending}
+                className="h-9 gap-2 bg-gradient-dash px-4"
+              >
                 <Save className="size-4" />
-                Save Changes
+                {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </form>
