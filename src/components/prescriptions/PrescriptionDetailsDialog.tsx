@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogClose,
@@ -16,6 +17,7 @@ type PrescriptionStatus = "active" | "refill requested" | "completed";
 
 export interface PrescriptionDetailsData {
   id: number;
+  patientCode?: string;
   name: string;
   medication: string;
   dosage: string;
@@ -24,12 +26,18 @@ export interface PrescriptionDetailsData {
   date: string;
   status: PrescriptionStatus;
   specialInstructions?: string;
+  providerName?: string;
+  providerSpecialty?: string;
+  providerLicenseNumber?: string;
+  providerImageUrl?: string;
 }
 
 interface PrescriptionDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prescription: PrescriptionDetailsData | null;
+  isLoading?: boolean;
+  errorMessage?: string | null;
 }
 
 const statusColorMap: Record<PrescriptionStatus, string> = {
@@ -45,12 +53,41 @@ function formatPatientId(id: number) {
   return `#PT${id.toString().padStart(6, "0")}`;
 }
 
+function getInitials(fullName?: string) {
+  if (!fullName) {
+    return "NA";
+  }
+
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return "NA";
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((value) => value[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 export default function PrescriptionDetailsDialog({
   open,
   onOpenChange,
   prescription,
+  isLoading = false,
+  errorMessage = null,
 }: PrescriptionDetailsDialogProps) {
-  if (!prescription) return null;
+  if (!prescription && !isLoading && !errorMessage) return null;
+
+  const patientId = prescription?.patientCode
+    ? `#${prescription.patientCode.replace(/^#/, "")}`
+    : formatPatientId(prescription?.id ?? 0);
+
+  const providerName = prescription?.providerName || "Provider";
+  const providerSpecialty =
+    prescription?.providerSpecialty || "Clinical Psychologist";
+  const providerLicense = prescription?.providerLicenseNumber;
+  const providerInitials = getInitials(providerName);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -64,120 +101,177 @@ export default function PrescriptionDetailsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 px-6 py-5">
-          <section className="space-y-3">
-            <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
-              <UserRound className="size-4 text-emerald-600" />
-              Patient Information
-            </h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">Patient Name</p>
-                <p className="text-lg font-medium text-slate-700">
-                  {prescription.name}
-                </p>
+        {isLoading ? (
+          <div className="space-y-6 px-6 py-5">
+            <section className="space-y-3">
+              <Skeleton className="h-5 w-44" />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">Patient ID</p>
-                <p className="text-lg font-medium text-slate-700">
-                  {formatPatientId(prescription.id)}
-                </p>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="space-y-3">
-            <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
-              <Pill className="size-4 text-emerald-600" />
-              Medication Details
-            </h3>
-            <div className="rounded-lg border-l-4 border-emerald-600 bg-blue-50 p-4">
-              <p className="text-sm text-muted-foreground">Medication Name</p>
-              <p className="text-lg font-semibold text-slate-700">
-                {prescription.medication}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">Dosage</p>
-                <p className="text-lg text-slate-700">{prescription.dosage}</p>
+            <section className="space-y-3">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-20 w-full" />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">Frequency</p>
-                <p className="text-lg text-slate-700">
-                  {prescription.frequency}
-                </p>
-              </div>
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">Duration</p>
-                <p className="text-lg text-slate-700">
-                  {prescription.duration}
-                </p>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="space-y-3">
-            <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
-              <CalendarDays className="size-5 text-emerald-600" />
-              Prescription Information
-            </h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">Issue Date</p>
-                <p className="text-lg text-slate-700">{prescription.date}</p>
+            <section className="space-y-3">
+              <Skeleton className="h-5 w-44" />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">Status</p>
-                <Badge
-                  className={cn(
-                    "mt-1 border-0",
-                    statusColorMap[prescription.status],
-                  )}
-                >
-                  {prescription.status}
-                </Badge>
+            </section>
+
+            <section className="space-y-3">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-24 w-full" />
+            </section>
+
+            <section className="space-y-3">
+              <Skeleton className="h-6 w-44" />
+              <div className="flex items-center gap-4 rounded-lg bg-muted/50 p-4">
+                <Skeleton className="size-12 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-44" />
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
               </div>
+            </section>
+          </div>
+        ) : errorMessage ? (
+          <div className="px-6 py-5">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {errorMessage}
             </div>
-          </section>
-
-          <section className="space-y-3">
-            <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
-              <FileText className="size-5 text-primary" />
-              Special Instructions
-            </h3>
-            <div className="rounded-lg bg-muted/50 p-4">
-              <p className="text-sm leading-5 text-slate-600">
-                {prescription.specialInstructions ||
-                  DEFAULT_SPECIAL_INSTRUCTIONS}
-              </p>
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-slate-700">
-              Prescribing Provider
-            </h3>
-            <div className="rounded-lg bg-muted/50 p-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="size-15">
-                  <AvatarFallback>SM</AvatarFallback>
-                </Avatar>
-                <div>
+          </div>
+        ) : prescription ? (
+          <div className="space-y-6 px-6 py-5">
+            <section className="space-y-3">
+              <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
+                <UserRound className="size-4 text-emerald-600" />
+                Patient Information
+              </h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-sm text-muted-foreground">Patient Name</p>
                   <p className="text-lg font-medium text-slate-700">
-                    Dr. Sarah Mitchell
+                    {prescription.name}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Clinical Psychologist
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    License: PSY-12345-CA
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-sm text-muted-foreground">Patient ID</p>
+                  <p className="text-lg font-medium text-slate-700">
+                    {patientId}
                   </p>
                 </div>
               </div>
-            </div>
-          </section>
-        </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
+                <Pill className="size-4 text-emerald-600" />
+                Medication Details
+              </h3>
+              <div className="rounded-lg border-l-4 border-emerald-600 bg-blue-50 p-4">
+                <p className="text-sm text-muted-foreground">Medication Name</p>
+                <p className="text-lg font-semibold text-slate-700">
+                  {prescription.medication}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-sm text-muted-foreground">Dosage</p>
+                  <p className="text-lg text-slate-700">
+                    {prescription.dosage}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-sm text-muted-foreground">Frequency</p>
+                  <p className="text-lg text-slate-700">
+                    {prescription.frequency}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-sm text-muted-foreground">Duration</p>
+                  <p className="text-lg text-slate-700">
+                    {prescription.duration}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
+                <CalendarDays className="size-5 text-emerald-600" />
+                Prescription Information
+              </h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-sm text-muted-foreground">Issue Date</p>
+                  <p className="text-lg text-slate-700">{prescription.date}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <Badge
+                    className={cn(
+                      "mt-1 border-0",
+                      statusColorMap[prescription.status],
+                    )}
+                  >
+                    {prescription.status}
+                  </Badge>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
+                <FileText className="size-5 text-primary" />
+                Special Instructions
+              </h3>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-sm leading-5 text-slate-600">
+                  {prescription.specialInstructions ||
+                    DEFAULT_SPECIAL_INSTRUCTIONS}
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-lg font-semibold text-slate-700">
+                Prescribing Provider
+              </h3>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="size-15">
+                    <AvatarFallback>{providerInitials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-lg font-medium text-slate-700">
+                      {providerName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {providerSpecialty}
+                    </p>
+                    {providerLicense ? (
+                      <p className="text-sm text-muted-foreground">
+                        License: {providerLicense}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        ) : null}
 
         <div className="flex items-center justify-end gap-3 border-t px-6 py-4">
           <DialogClose asChild>
