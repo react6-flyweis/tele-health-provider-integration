@@ -96,6 +96,18 @@ interface ProviderPatientsResponse {
   message?: string;
 }
 
+interface ProviderPatientDetailData {
+  patient: ProviderPatientDetail;
+  sessionCount: number;
+  appointments: ProviderPatientAppointment[];
+}
+
+interface ProviderPatientDetailResponse {
+  status: "success" | "fail";
+  data?: ProviderPatientDetailData;
+  message?: string;
+}
+
 export async function getProviderPatients() {
   try {
     const response = await apiClient.get<ProviderPatientsResponse>("/patients");
@@ -104,6 +116,24 @@ export async function getProviderPatients() {
 
     if (data?.status !== "success" || !data?.data) {
       throw new Error(data?.message || "Could not load patients");
+    }
+
+    return data.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
+
+export async function getProviderPatientDetail(patientId: string) {
+  try {
+    const response = await apiClient.get<ProviderPatientDetailResponse>(
+      `/patients/${patientId}`,
+    );
+
+    const data = response.data;
+
+    if (data?.status !== "success" || !data?.data) {
+      throw new Error(data?.message || "Could not load patient details");
     }
 
     return data.data;
