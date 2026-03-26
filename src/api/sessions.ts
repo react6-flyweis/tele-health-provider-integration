@@ -30,6 +30,18 @@ export interface ProviderSession {
   providerNotes?: string | null;
 }
 
+export interface ProviderSessionConnection {
+  appId: string;
+  channelName: string;
+  token: string;
+  provider: string;
+}
+
+export interface StartedProviderSession extends ProviderSession {
+  roomName: string;
+  startTime: string;
+}
+
 interface ProviderSessionsResponse {
   status: "success" | "fail";
   results: number;
@@ -40,12 +52,41 @@ interface ProviderSessionsResponse {
   message?: string;
 }
 
+interface StartProviderSessionResponse {
+  status: "success" | "fail";
+  message?: string;
+  data?: {
+    session?: StartedProviderSession;
+    connection?: ProviderSessionConnection;
+  };
+}
+
 export async function getProviderSessions() {
   try {
     const { data } = await apiClient.get<ProviderSessionsResponse>("/sessions");
 
     if (data?.status !== "success" || !data?.data?.sessions) {
       throw new Error(data?.message || "Could not load provider sessions");
+    }
+
+    return data.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
+
+export async function startProviderSession(sessionId: string) {
+  try {
+    const { data } = await apiClient.put<StartProviderSessionResponse>(
+      `/sessions/${sessionId}/start`,
+    );
+
+    if (
+      data?.status !== "success" ||
+      !data?.data?.session ||
+      !data?.data?.connection
+    ) {
+      throw new Error(data?.message || "Could not start session");
     }
 
     return data.data;
