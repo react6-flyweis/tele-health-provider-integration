@@ -55,7 +55,10 @@ export const Routes: RouteObject[] = [
           { index: true, element: <DashboardPage /> },
           { path: "appointments", element: <AppointmentsPage /> },
           { path: "video-sessions", element: <VideoSessionsPage /> },
-          { path: "video-sessions/live", element: <SingleVideoSessionPage /> },
+          {
+            path: "video-sessions/live/:sessionId",
+            element: <SingleVideoSessionPage />,
+          },
           { path: "patient-records", element: <PatientRecordsPage /> },
           { path: "prescriptions", element: <PrescriptionsPage /> },
           { path: "earnings", element: <EarningsPage /> },
