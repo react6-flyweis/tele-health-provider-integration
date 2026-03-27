@@ -122,3 +122,22 @@ export async function updateProviderSessionTypes(
     throw new Error(getApiErrorMessage(error));
   }
 }
+
+export async function updateProviderBlockedDates(
+  payload: UpdateProviderBlockedDatesPayload,
+) {
+  try {
+    const { data } = await apiClient.put<UpdateProviderAvailabilityResponse>(
+      "/availability/blocked-dates",
+      payload,
+    );
+
+    if (data?.status !== "success") {
+      throw new Error(data?.message || "Could not block dates");
+    }
+
+    return data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
