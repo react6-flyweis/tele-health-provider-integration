@@ -34,6 +34,12 @@ interface UpdateProviderProfileResponse {
   message?: string;
 }
 
+interface UpdateProviderProfilePhotoResponse {
+  status: "success" | "fail";
+  data?: ProviderProfileDetails;
+  message?: string;
+}
+
 export async function getProviderProfile() {
   try {
     const { data } = await apiClient.get<ProviderProfileResponse>("/profile");
@@ -64,6 +70,34 @@ export async function updateProviderProfile(
     return {
       profile: data?.data,
       message: data?.message || "Profile updated successfully.",
+    };
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
+
+export async function updateProviderProfilePhoto(photo: File) {
+  const formData = new FormData();
+  formData.append("photo", photo);
+
+  try {
+    const { data } = await apiClient.post<UpdateProviderProfilePhotoResponse>(
+      "/profile/photo",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
+    if (data?.status !== "success") {
+      throw new Error(data?.message || "Could not update profile photo");
+    }
+
+    return {
+      profile: data?.data,
+      message: data?.message || "Profile photo updated successfully.",
     };
   } catch (error) {
     throw new Error(getApiErrorMessage(error));
