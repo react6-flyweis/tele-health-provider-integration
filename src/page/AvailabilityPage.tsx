@@ -18,7 +18,11 @@ import SessionTypeDialog, {
   type SessionType,
 } from "@/components/availability/SessionTypeDialog";
 import { getProviderAvailability } from "@/api/availability";
-import { useUpdateAvailabilityScheduleMutation } from "@/hooks/useAvailabilityMutations";
+import {
+  useUpdateAvailabilityBlockedDatesMutation,
+  useUpdateAvailabilityScheduleMutation,
+  useUpdateAvailabilitySessionTypesMutation,
+} from "@/hooks/useAvailabilityMutations";
 
 type Slot = {
   start: string;
@@ -93,6 +97,10 @@ export default function AvailabilityPage() {
     retry: 1,
   });
   const updateScheduleMutation = useUpdateAvailabilityScheduleMutation();
+  const updateSessionTypesMutation =
+    useUpdateAvailabilitySessionTypesMutation();
+  const updateBlockedDatesMutation =
+    useUpdateAvailabilityBlockedDatesMutation();
 
   const mappedSchedule = useMemo<DaySchedule[]>(() => {
     if (!data) return INITIAL_SCHEDULE;
@@ -233,6 +241,32 @@ export default function AvailabilityPage() {
     });
   }
 
+  function parseFeeToNumber(fee: string) {
+    const numericValue = Number(fee.replace(/[^\d.]/g, "").trim());
+    return Number.isFinite(numericValue) ? numericValue : 0;
+  }
+
+  function handleSaveSessionTypes() {
+    const payloadSessionTypes = sessionTypes
+      .map((item) => ({
+        name: item.name.trim(),
+        duration: item.duration,
+        fee: parseFeeToNumber(item.fee),
+      }))
+      .filter((item) => item.name.length > 0);
+
+    updateSessionTypesMutation.mutate(
+      {
+        sessionTypes: payloadSessionTypes,
+      },
+      {
+        onSuccess: () => {
+          setSessionTypesEdits(null);
+        },
+      },
+    );
+  }
+
   function handleSaveSchedule() {
     const payloadSchedule = schedule
       .map((item) => ({
@@ -257,6 +291,25 @@ export default function AvailabilityPage() {
       {
         onSuccess: () => {
           setScheduleEdits(null);
+        },
+      },
+    );
+  }
+
+  function handleBlockTime() {
+    if (!blockedDate.startDate || !blockedDate.endDate) {
+      return;
+    }
+
+    updateBlockedDatesMutation.mutate(
+      {
+        startDate: blockedDate.startDate,
+        endDate: blockedDate.endDate,
+        reason: blockedDate.reason.trim(),
+      },
+      {
+        onSuccess: () => {
+          setBlockedDateEdits(null);
         },
       },
     );
@@ -448,6 +501,26 @@ export default function AvailabilityPage() {
               <Plus className="size-4" />
               Add Session Type
             </Button>
+
+            {updateSessionTypesMutation.isError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {updateSessionTypesMutation.error instanceof Error
+                  ? updateSessionTypesMutation.error.message
+                  : "Unable to update session types."}
+              </div>
+            ) : null}
+
+            <Button
+              className="w-full bg-gradient-dash text-white hover:opacity-95"
+              onClick={handleSaveSessionTypes}
+              disabled={
+                updateSessionTypesMutation.isPending || isLoading || isFetching
+              }
+            >
+              {updateSessionTypesMutation.isPending
+                ? "Saving..."
+                : "Save Session Types"}
+            </Button>
           </CardContent>
         </Card>
 
@@ -505,9 +578,29 @@ export default function AvailabilityPage() {
               />
             </div>
 
-            <Button className="w-full bg-gradient-dash text-white hover:opacity-95">
-              Block Time
+            <Button
+              className="w-full bg-gradient-dash text-white hover:opacity-95"
+              onClick={handleBlockTime}
+              disabled={
+                updateBlockedDatesMutation.isPending ||
+                isLoading ||
+                isFetching ||
+                !blockedDate.startDate ||
+                !blockedDate.endDate
+              }
+            >
+              {updateBlockedDatesMutation.isPending
+                ? "Blocking..."
+                : "Block Time"}
             </Button>
+
+            {updateBlockedDatesMutation.isError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {updateBlockedDatesMutation.error instanceof Error
+                  ? updateBlockedDatesMutation.error.message
+                  : "Unable to block dates."}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </div>
