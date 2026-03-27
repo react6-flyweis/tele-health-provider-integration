@@ -28,6 +28,10 @@ export interface ProviderPaymentAccount {
   stripeAccountId: string;
 }
 
+export interface ProviderDataExport {
+  exportedAt?: string;
+  [key: string]: unknown;
+}
 
 interface NotificationPreferencesResponse {
   status: "success" | "fail";
@@ -132,6 +136,27 @@ export async function getProviderPaymentAccount() {
     }
 
     return paymentAccount;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
+
+export async function downloadProviderDataExport() {
+  try {
+    const { data } = await apiClient.get<
+      ProviderDataExport | { data?: ProviderDataExport }
+    >("/settings/download-data");
+
+    const payload =
+      typeof data === "object" && data !== null && "data" in data
+        ? data.data
+        : data;
+
+    if (!payload || typeof payload !== "object") {
+      throw new Error("Could not download provider data");
+    }
+
+    return payload as ProviderDataExport;
   } catch (error) {
     throw new Error(getApiErrorMessage(error));
   }
