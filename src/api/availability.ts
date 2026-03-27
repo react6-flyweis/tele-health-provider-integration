@@ -42,6 +42,22 @@ export interface UpdateProviderAvailabilityPayload {
   timezone: string;
 }
 
+export interface UpdateProviderSessionTypeItem {
+  name: string;
+  duration: number;
+  fee: number;
+}
+
+export interface UpdateProviderSessionTypesPayload {
+  sessionTypes: UpdateProviderSessionTypeItem[];
+}
+
+export interface UpdateProviderBlockedDatesPayload {
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
 interface ProviderAvailabilityResponse {
   status: "success" | "fail";
   data?: ProviderAvailabilityData;
@@ -80,6 +96,25 @@ export async function updateProviderAvailabilitySchedule(
 
     if (data?.status !== "success") {
       throw new Error(data?.message || "Could not update availability");
+    }
+
+    return data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
+
+export async function updateProviderSessionTypes(
+  payload: UpdateProviderSessionTypesPayload,
+) {
+  try {
+    const { data } = await apiClient.put<UpdateProviderAvailabilityResponse>(
+      "/availability/session-types",
+      payload,
+    );
+
+    if (data?.status !== "success") {
+      throw new Error(data?.message || "Could not update session types");
     }
 
     return data;
