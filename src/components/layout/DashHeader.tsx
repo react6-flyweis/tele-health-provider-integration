@@ -10,14 +10,15 @@ import { Bell, Search } from "lucide-react";
 import { usePageTitleStore } from "@/store/pageTitleStore";
 import { useAuthStore } from "@/store/authStore";
 import { SidebarTrigger } from "../ui/sidebar";
+import { Link } from "react-router";
 
 export default function DashHeader() {
   const title = usePageTitleStore((s) => s.title);
   const provider = useAuthStore((state) => state.provider);
 
-  const fullName = provider
-    ? `${provider.firstName} ${provider.lastName}`
-    : "Provider";
+  // const fullName = provider
+  //   ? `${provider.firstName} ${provider.lastName}`
+  //   : "Provider";
   const initials = provider
     ? `${provider.firstName.charAt(0)}${provider.lastName.charAt(0)}`.toUpperCase()
     : "PR";
@@ -59,19 +60,21 @@ export default function DashHeader() {
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Avatar className="size-10 border border-slate-100 bg-white">
-                <AvatarImage src={provider?.profileImageUrl} alt={fullName} />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
+            <Link to="/dashboard/profile" className="">
+              <div className="flex items-center gap-3">
+                <Avatar className="size-10 border border-slate-100 bg-white">
+                  <AvatarImage src={provider?.profileImageUrl} alt={initials} />
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
 
-              <div className="hidden sm:flex flex-col">
+                {/* <div className="hidden sm:flex flex-col">
                 <span className="text-sm font-semibold">{fullName}</span>
                 <span className="text-xs text-muted-foreground">
                   {provider?.email ?? "provider@email.com"}
                 </span>
+              </div> */}
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </div>
