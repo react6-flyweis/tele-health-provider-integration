@@ -10,6 +10,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { useUpdatePatientRecordMutation } from "@/hooks/usePatientMutations";
 
 export interface Patient {
   id: string;
@@ -29,22 +30,32 @@ export interface Patient {
 interface EditPatientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  patientId: string;
   patient: Patient;
-  onSave: (patient: Patient) => void;
+  onSave?: (patient: Patient) => void;
 }
 
 export default function EditPatientDialog({
   open,
   onOpenChange,
+  patientId,
   patient,
   onSave,
 }: EditPatientDialogProps) {
   const [formData, setFormData] = React.useState<Patient>(patient);
+  const [localError, setLocalError] = React.useState<string | null>(null);
+  const updatePatientRecordMutation = useUpdatePatientRecordMutation();
 
   // when dialog opens or patient prop changes, sync form data
   React.useEffect(() => {
     setFormData(patient);
   }, [patient]);
+
+  React.useEffect(() => {
+    if (open) {
+      setLocalError(null);
+    }
+  }, [open]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -60,10 +71,37 @@ export default function EditPatientDialog({
     );
   }
 
-  function handleSubmit() {
-    onSave(formData);
-    onOpenChange(false);
+  async function handleSubmit() {
+    setLocalError(null);
+
+    try {
+      updatePatientRecordMutation.reset();
+
+      await updatePatientRecordMutation.mutateAsync({
+        patientId,
+        payload: {
+          diagnosis: formData.currentDiagnosis?.trim(),
+          treatmentNotes: formData.treatmentPlan?.trim(),
+          medicalHistory: formData.medicalHistory?.trim(),
+        },
+      });
+
+      onSave?.(formData);
+      onOpenChange(false);
+    } catch (error) {
+      setLocalError(
+        error instanceof Error ? error.message : "Could not save changes.",
+      );
+    }
   }
+
+  const saveError =
+    updatePatientRecordMutation.isError &&
+    updatePatientRecordMutation.error instanceof Error
+      ? updatePatientRecordMutation.error.message
+      : null;
+  const isSaving = updatePatientRecordMutation.isPending;
+  const errorMessage = localError || saveError;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -172,15 +210,24 @@ export default function EditPatientDialog({
           </div>
         </div>
 
+        {errorMessage ? (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        ) : null}
+
         <DialogFooter className="bg-transparent flex gap-5">
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" disabled={isSaving}>
+              Cancel
+            </Button>
           </DialogClose>
           <Button
             className="bg-gradient-dash text-white hover:opacity-95"
             onClick={handleSubmit}
+            disabled={isSaving}
           >
-            Save Changes
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>

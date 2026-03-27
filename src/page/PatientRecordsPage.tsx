@@ -217,6 +217,7 @@ export default function PatientRecordsPage() {
         <EditPatientDialog
           open={editOpen}
           onOpenChange={setEditOpen}
+          patientId={selectedPatient.backendId}
           patient={selectedPatient}
           onSave={(updated) => {
             setPatients((prev) =>
