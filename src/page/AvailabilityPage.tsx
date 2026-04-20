@@ -14,6 +14,7 @@ import { usePageTitle } from "@/store/pageTitleStore";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import DeleteTimeSlotDialog from "@/components/availability/DeleteTimeSlotDialog";
+import { DatePickerInput } from "@/components/availability/DatePickerInput";
 import SessionTypeDialog, {
   type SessionType,
 } from "@/components/availability/SessionTypeDialog";
@@ -545,33 +546,38 @@ export default function AvailabilityPage() {
           </CardHeader>
 
           <CardContent className="space-y-3 py-4">
-            <div className="space-y-1.5">
-              <p className="text-xs text-slate-600">Start Date</p>
-              <Input
-                type="date"
-                value={blockedDate.startDate}
-                onChange={(event) =>
-                  setBlockedDateEdits((prev) => ({
-                    ...(prev ?? mappedBlockedDate),
-                    startDate: event.target.value,
-                  }))
-                }
-              />
-            </div>
+            <DatePickerInput
+              id="blocked-start-date"
+              label="Start Date"
+              value={blockedDate.startDate}
+              onValueChange={(value) =>
+                setBlockedDateEdits((prev) => {
+                  const current = prev ?? mappedBlockedDate;
 
-            <div className="space-y-1.5">
-              <p className="text-xs text-slate-600">End Date</p>
-              <Input
-                type="date"
-                value={blockedDate.endDate}
-                onChange={(event) =>
-                  setBlockedDateEdits((prev) => ({
-                    ...(prev ?? mappedBlockedDate),
-                    endDate: event.target.value,
-                  }))
-                }
-              />
-            </div>
+                  return {
+                    ...current,
+                    startDate: value,
+                    endDate:
+                      current.endDate && value && current.endDate < value
+                        ? ""
+                        : current.endDate,
+                  };
+                })
+              }
+            />
+
+            <DatePickerInput
+              id="blocked-end-date"
+              label="End Date"
+              value={blockedDate.endDate}
+              minValue={blockedDate.startDate}
+              onValueChange={(value) =>
+                setBlockedDateEdits((prev) => ({
+                  ...(prev ?? mappedBlockedDate),
+                  endDate: value,
+                }))
+              }
+            />
 
             <div className="space-y-1.5">
               <p className="text-xs text-slate-600">Reason (Optional)</p>
