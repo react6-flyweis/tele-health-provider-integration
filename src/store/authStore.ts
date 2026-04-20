@@ -66,7 +66,18 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
+function redirectToProviderLogin() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (window.location.pathname !== "/provider-login") {
+    window.location.replace("/provider-login");
+  }
+}
+
 export function forceLogoutWithAlert(message: string) {
   const state = useAuthStore.getState();
   notifyAndClear(message, state.clearAuth);
+  redirectToProviderLogin();
 }
