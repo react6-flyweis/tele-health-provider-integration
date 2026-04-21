@@ -292,12 +292,9 @@ export default function AvailabilityPage() {
       })
       .filter((item) => item.slots.length > 0);
 
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-
     updateScheduleMutation.mutate(
       {
         availability: payloadAvailability,
-        timezone,
       },
       {
         onSuccess: () => {

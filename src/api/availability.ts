@@ -42,7 +42,6 @@ export interface UpdateProviderAvailabilityScheduleItem {
 
 export interface UpdateProviderAvailabilityPayload {
   availability: UpdateProviderAvailabilityScheduleItem[];
-  timezone?: string;
 }
 
 export interface UpdateProviderSessionTypeItem {
