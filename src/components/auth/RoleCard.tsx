@@ -18,9 +18,13 @@ export default function RoleCard({ role }: Props) {
     ? "Access your, appointments, and prescriptions"
     : "Manage appointments, patients, and consultations";
 
-  const handleClick = () => {
+const handleClick = () => {
+  if (role === "patient") {
+    window.location.href = "https://mr-railu-medical-user-website-mauve.vercel.app/patient-login";
+  } else {
     navigate(`/${role}-login`);
-  };
+  }
+};
 
   const Icon = isPatient ? Heart : Stethoscope;
 
