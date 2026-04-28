@@ -548,38 +548,45 @@ export default function AvailabilityPage() {
           </CardHeader>
 
           <CardContent className="space-y-3 py-4">
-            <DatePickerInput
-              id="blocked-start-date"
-              label="Start Date"
-              value={blockedDate.startDate}
-              onValueChange={(value) =>
-                setBlockedDateEdits((prev) => {
-                  const current = prev ?? mappedBlockedDate;
+         <DatePickerInput
+  id="blocked-start-date"
+  label="Start Date"
+  value={blockedDate.startDate}
+  minValue={new Date().toISOString().split("T")[0]}
+  onValueChange={(value) =>
+    setBlockedDateEdits((prev) => {
+      const current = prev ?? mappedBlockedDate;
 
-                  return {
-                    ...current,
-                    startDate: value,
-                    endDate:
-                      current.endDate && value && current.endDate < value
-                        ? ""
-                        : current.endDate,
-                  };
-                })
-              }
-            />
+      return {
+        ...current,
+        startDate: value,
+        endDate:
+          current.endDate && value && current.endDate < value
+            ? ""
+            : current.endDate,
+      };
+    })
+  }
+/>
 
-            <DatePickerInput
-              id="blocked-end-date"
-              label="End Date"
-              value={blockedDate.endDate}
-              minValue={blockedDate.startDate}
-              onValueChange={(value) =>
-                setBlockedDateEdits((prev) => ({
-                  ...(prev ?? mappedBlockedDate),
-                  endDate: value,
-                }))
-              }
-            />
+<DatePickerInput
+  id="blocked-end-date"
+  label="End Date"
+  value={blockedDate.endDate}
+  minValue={blockedDate.startDate || new Date().toISOString().split("T")[0]}
+  onValueChange={(value) =>
+    setBlockedDateEdits((prev) => {
+      const current = prev ?? mappedBlockedDate;
+
+      if (current.startDate && value < current.startDate) return current;
+
+      return {
+        ...current,
+        endDate: value,
+      };
+    })
+  }
+/>
 
             <div className="space-y-1.5">
               <p className="text-xs text-slate-600">Reason (Optional)</p>
