@@ -4,12 +4,14 @@ import { useState } from "react";
 
 type Props = {
   role: "patient" | "provider";
-  path: string;
 };
 
 export default function RoleCard({ role }: Props) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
+  const websiteURL =
+    import.meta.env.VITE_MAIN_WEBSITE_URL ||
+    "https://telehealth-integration.vercel.app/";
 
   const isPatient = role === "patient";
 
@@ -18,13 +20,16 @@ export default function RoleCard({ role }: Props) {
     ? "Access your, appointments, and prescriptions"
     : "Manage appointments, patients, and consultations";
 
-const handleClick = () => {
-  if (role === "patient") {
-    window.location.href = "https://mr-railu-medical-user-website-mauve.vercel.app/patient-login";
-  } else {
-    navigate(`/${role}-login`);
-  }
-};
+  const handleClick = () => {
+    if (role === "patient") {
+      const normalizedBase = websiteURL.endsWith("/")
+        ? websiteURL.slice(0, -1)
+        : websiteURL;
+      window.location.href = `${normalizedBase}/patient-login`;
+    } else {
+      navigate(`/${role}-login`);
+    }
+  };
 
   const Icon = isPatient ? Heart : Stethoscope;
 

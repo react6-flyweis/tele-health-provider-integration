@@ -23,8 +23,8 @@ export default function SignupRolePage() {
         </div>
 
         <div className="flex flex-wrap gap-6 justify-center w-full">
-          <RoleCard role="patient" path="/patient-login" />
-          <RoleCard role="provider" path="/provider-login" />
+          <RoleCard role="patient" />
+          <RoleCard role="provider" />
         </div>
       </div>
     </div>
