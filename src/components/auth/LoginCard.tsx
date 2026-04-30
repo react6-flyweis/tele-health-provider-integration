@@ -66,7 +66,7 @@ export default function LoginCard({
   return (
     <div className="w-full max-w-[448px] mx-auto">
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/")}
         className="flex items-center gap-2 text-[#4A5565] mb-5"
       >
         <ArrowLeft size={18} />
