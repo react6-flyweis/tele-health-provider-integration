@@ -1,12 +1,19 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router";
 
-import { registerProvider } from "@/api/auth";
+import { getProviderSpecialties, registerProvider } from "@/api/auth";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import type { RegisterProviderPayload } from "@/types/auth";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -21,9 +28,16 @@ export default function RegisterCard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
-  const [specialty, setSpecialty] = useState("");
+  const [specialtyId, setSpecialtyId] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [experience, setExperience] = useState("");
+
+  const specialtiesQuery = useQuery({
+    queryKey: ["providerSpecialties"],
+    queryFn: getProviderSpecialties,
+    staleTime: 1000 * 60 * 60,
+    retry: 1,
+  });
 
   const registerMutation = useMutation({
     mutationFn: registerProvider,
@@ -66,13 +80,18 @@ export default function RegisterCard() {
       return;
     }
 
+    if (!specialtyId) {
+      setFormError("Please select a specialty.");
+      return;
+    }
+
     const payload: RegisterProviderPayload = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
       password,
       phone: phone.trim(),
-      specialty: specialty.trim(),
+      specialtyIds: [specialtyId],
       licenseNumber: licenseNumber.trim(),
       experience: parsedExperience,
     };
@@ -186,14 +205,32 @@ export default function RegisterCard() {
               <label className="block mb-2 text-sm font-medium">
                 Specialty
               </label>
-              <input
-                type="text"
-                placeholder="Psychiatry"
-                value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
-                className="w-full h-12 px-4 rounded-[14px] placeholder:text-[#0A0A0A80] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                required
-              />
+              <Select
+                value={specialtyId}
+                onValueChange={(value) => setSpecialtyId(value)}
+              >
+                <SelectTrigger className="w-full min-h-12 px-4 rounded-[14px] border border-gray-300 focus:ring-2 focus:ring-teal-500">
+                  <SelectValue
+                    placeholder={
+                      specialtiesQuery.isLoading
+                        ? "Loading specialties..."
+                        : "Select specialty"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {(specialtiesQuery.data?.specialties || []).map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {specialtiesQuery.isError ? (
+                <p className="mt-2 text-sm text-red-600">
+                  {getApiErrorMessage(specialtiesQuery.error)}
+                </p>
+              ) : null}
             </div>
 
             <div>

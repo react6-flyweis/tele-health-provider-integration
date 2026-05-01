@@ -34,9 +34,20 @@ export interface RegisterProviderPayload {
   email: string;
   password: string;
   phone: string;
-  specialty: string;
+  specialtyIds: string[];
   licenseNumber: string;
   experience: number;
+}
+
+export interface ProviderSpecialty {
+  id: string;
+  value: string;
+  label: string;
+  name: string;
+}
+
+export interface ProviderSpecialtiesData {
+  specialties: ProviderSpecialty[];
 }
 
 export interface ProviderLoginResponse {
